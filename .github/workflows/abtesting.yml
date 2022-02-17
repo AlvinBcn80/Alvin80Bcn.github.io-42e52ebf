@@ -1,0 +1,70 @@
+name: A/B Testing
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/abtesting.yml'
+      - 'abtesting/**'
+      - 'scripts/*'
+      - 'scripts/abtesting.sh'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/abtesting.yml'
+      - 'abtesting/**'
+      - 'scripts/*'
+      - 'scripts/abtesting.sh'
+
+  workflow_dispatch:
+
+env:
+  secrets_passphrase: ${{ secrets.GHASECRETSGPGPASSPHRASE1 }}
+  SAMPLE: ABTesting
+
+jobs:
+  cocoapods:
+    name: cocoapods
+    runs-on: macOS-latest
+    env:
+      SPM: false
+      TEST: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Setup
+        run: |
+          cd abtesting/LegacyABTestingQuickstart
+          gem install bundler
+          bundle install
+          gem install xcpretty
+          bundle exec pod install --repo-update
+          cd ..
+          ../scripts/install_prereqs/abtesting.sh
+      - name: Build Swift
+        run: ./scripts/test.sh
+        env:
+          LEGACY: true
+          SWIFT_SUFFIX: ""
+          OS: iOS
+          DEVICE: iPhone 11
+  spm:
+    name: spm
+    runs-on: macOS-11
+    env:
+      SPM: true
+      DIR: abtesting
+      TEST: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Setup
+        run: |
+          gem install xcpretty
+          cd abtesting
+          ../scripts/install_prereqs/abtesting.sh
+      - name: Build and Test SwiftUI
+        run: ./scripts/test.sh
+        env:
+          OS: iOS
+          DEVICE: iPhone 12
