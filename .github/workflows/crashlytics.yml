@@ -1,0 +1,87 @@
+name: Crashlytics
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/crashlytics.yml'
+      - 'crashlytics/**'
+      - 'scripts/*'
+      - 'scripts/crashlytics.sh'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/crashlytics.yml'
+      - 'crashlytics/**'
+      - 'scripts/*'
+      - 'scripts/crashlytics.sh'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build
+    runs-on: macOS-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Setup
+        run: |
+          cd crashlytics/LegacyCrashlyticsQuickstart
+          gem install bundler
+          bundle install
+          gem install xcpretty
+          bundle exec pod install --repo-update
+          cd ..
+          ../scripts/install_prereqs/crashlytics.sh
+        env:
+          SAMPLE: Crashlytics
+          secrets_passphrase: ${{ secrets.GHASECRETSGPGPASSPHRASE1 }}
+          LEGACY: true
+      - name: Build ObjC
+        run:  ./scripts/test.sh
+        env:
+          SWIFT_SUFFIX: ''
+          SAMPLE: Crashlytics
+          LEGACY: true
+      - name: Build Swift
+        run:  ./scripts/test.sh
+        env:
+          SWIFT_SUFFIX: 'Swift'
+          SAMPLE: Crashlytics
+          LEGACY: true
+      - name: Build SwiftUI (iOS)
+        run: |
+          cd crashlytics
+          ../scripts/install_prereqs/crashlytics.sh
+          xcodebuild \
+          -project CrashlyticsExample.xcodeproj \
+          -scheme 'CrashlyticsSwiftUIExample (iOS)' \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 11' \
+          build
+        env: 
+          SAMPLE: Crashlytics
+      - name: Build SwiftUI (tvOS)
+        run: |
+          cd crashlytics
+          ../scripts/install_prereqs/crashlytics.sh
+          xcodebuild \
+          -project CrashlyticsExample.xcodeproj \
+          -scheme 'CrashlyticsSwiftUIExample' \
+          -sdk appletvsimulator \
+          build
+        env:
+          SAMPLE: Crashlytics
+      - name: Build SwiftUI (macOS)
+        run: |
+          cd crashlytics
+          ../scripts/install_prereqs/crashlytics.sh
+          xcodebuild \
+          -project CrashlyticsExample.xcodeproj \
+          -scheme 'CrashlyticsSwiftUIExample (macOS)' \
+          -sdk macosx \
+          build
+        env:
+          SAMPLE: Crashlytics
