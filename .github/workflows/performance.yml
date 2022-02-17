@@ -1,0 +1,78 @@
+name: Performance
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/performance.yml'
+      - 'performance/**'
+      - 'scripts/*'
+      - 'scripts/performance.sh'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/performance.yml'
+      - 'performance/**'
+      - 'scripts/*'
+      - 'scripts/performance.sh'
+
+  workflow_dispatch:
+
+env:
+  SAMPLE: Performance
+  secrets_passphrase: ${{ secrets.GHASECRETSGPGPASSPHRASE1 }}
+
+jobs:
+  cocoapods:
+    name: cocoapods
+    runs-on: macOS-latest
+    env:
+      SPM: false
+      LEGACY: false
+      OS: iOS
+      DEVICE: iPhone 11
+      TEST: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Setup
+        run: |
+          cd performance
+          gem install bundler
+          bundle install
+          gem install xcpretty
+          bundle exec pod install --repo-update
+          ../scripts/install_prereqs/performance.sh
+      - name: Build ObjC
+        run: ./scripts/test.sh
+        env:
+          SWIFT_SUFFIX: ""
+      - name: Build Swift
+        run: ./scripts/test.sh
+        env:
+          SWIFT_SUFFIX: Swift
+  spm:
+    name: spm
+    runs-on: macOS-11
+    env:
+      SPM: true
+      DIR: performance/SwiftUIPerformanceQuickstart/PerformanceExample
+      TEST: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+      - name: Setup
+        run: |
+          gem install xcpretty
+          cd performance
+          ../scripts/install_prereqs/performance.sh
+      - name: Build and Test SwiftUI iOS
+        run: ./scripts/test.sh
+        env:
+          OS: iOS
+          DEVICE: iPhone 12 Pro
+      - name: Build and Test SwiftUI tvOS
+        run: ./scripts/test.sh
+        env:
+          OS: tvOS
+          DEVICE: Apple TV 4K (at 1080p) (2nd generation)
